@@ -46,34 +46,32 @@ import cats.syntax.all._
  * that sequentially calls upon a [[Dispatcher]] every time it reaches
  * an "await" block.
  */
-class AsyncAwaitDsl[F[_]](implicit F: Async[F]) {
+object dsl {
 
-  /**
-   * Type member used by the macro expansion to recover what `F` is without typetags
-   */
-  type _AsyncContext[A] = F[A]
+  implicit class AwaitSyntax[F[_], A](val self: F[A]) extends AnyVal {
 
-  /**
-   * Value member used by the macro expansion to recover the Async instance associated to the block.
-   */
-  implicit val _AsyncInstance: Async[F] = F
+    /**
+     * Non-blocking await the on result of `awaitable`. This may only be used directly within an enclosing `async` block.
+     *
+     * Internally, this transforms the remainder of the code in enclosing `async` block into a callback
+     * that triggers upon a successful computation outcome. It does *not* block a thread.
+     */
+    def await: A = macro AsyncAwaitDsl.awaitImpl[F, A]
+  }
 
-  /**
-   * Non-blocking await the on result of `awaitable`. This may only be used directly within an enclosing `async` block.
-   *
-   * Internally, this transforms the remainder of the code in enclosing `async` block into a callback
-   * that triggers upon a successful computation outcome. It does *not* block a thread.
-   */
   @compileTimeOnly("[async] `await` must be enclosed in an `async` block")
-  def await[T](awaitable: F[T]): T =
-    ??? // No implementation here, as calls to this are translated by the macro.
+  def _await[F[_], A](self: F[A]): A = ???
 
   /**
    * Run the block of code `body` asynchronously. `body` may contain calls to `await` when the results of
    * a `F` are needed; this is translated into non-blocking code.
    */
-  def async[T](body: => T): F[T] = macro AsyncAwaitDsl.asyncImpl[F, T]
+  def async[F[_]]: PartiallyAppliedAsync[F] = new PartiallyAppliedAsync[F]
 
+  final class PartiallyAppliedAsync[F0[_]] {
+    type F[A] = F0[A]
+    def apply[A](body: => A)(implicit F: Async[F]): F[A] = macro AsyncAwaitDsl.asyncImpl[F, A]
+  }
 }
 
 object AsyncAwaitDsl {
@@ -88,18 +86,26 @@ object AsyncAwaitDsl {
   // get lost during Dispatcher#unsafeRun calls (WriterT/IorT logs).
   type AwaitOutcome[F[_]] = Either[F[AnyRef], (F[Unit], AnyRef)]
 
-  def asyncImpl[F[_], T](
-      c: blackbox.Context
-  )(body: c.Expr[T]): c.Expr[F[T]] = {
+  def awaitImpl[F[_], A](c: blackbox.Context): c.Expr[A] = {
+    import c.universe._
+    c.Expr(q"""_root_.cats.effect.cps.dsl._await(${c.prefix}.self)""")
+  }
+
+  def asyncImpl[F[_], A](
+      c: blackbox.Context)(
+      body: c.Expr[A])(
+      F: c.Expr[Async[F]])(
+      implicit A: c.universe.WeakTypeTag[A])
+      : c.Expr[F[A]] = {
     import c.universe._
     if (!c.compilerSettings.contains("-Xasync")) {
       c.abort(
         c.macroApplication.pos,
-        "The async requires the compiler option -Xasync (supported only by Scala 2.12.12+ / 2.13.3+)"
-      )
+        "async/await syntax requires the compiler option -Xasync (supported only by Scala 2.12.12+ / 2.13.3+)")
     } else
       try {
-        val awaitSym = typeOf[AsyncAwaitDsl[Any]].decl(TermName("await"))
+        val awaitSym = typeOf[dsl.type].decl(TermName("_await"))
+
         def mark(t: DefDef): Tree = {
           c.internal
             .asInstanceOf[{
@@ -107,30 +113,32 @@ object AsyncAwaitDsl {
                   owner: Symbol,
                   method: DefDef,
                   awaitSymbol: Symbol,
-                  config: Map[String, AnyRef]
-              ): DefDef
+                  config: Map[String, AnyRef])
+                  : DefDef
             }]
             .markForAsyncTransform(
               c.internal.enclosingOwner,
               t,
               awaitSym,
-              Map.empty
-            )
+              Map.empty)
         }
+
         val name = TypeName("stateMachine$async")
+
         // format: off
         val tree = q"""
-          final class $name(dispatcher: _root_.cats.effect.std.Dispatcher[${c.prefix}._AsyncContext], callback: _root_.cats.effect.cps.AsyncAwaitDsl.AwaitCallback[${c.prefix}._AsyncContext]) extends _root_.cats.effect.cps.AsyncAwaitStateMachine(dispatcher, callback) {
-            ${mark(q"""override def apply(tr$$async: _root_.cats.effect.cps.AsyncAwaitDsl.AwaitOutcome[${c.prefix}._AsyncContext]): _root_.scala.Unit = ${body}""")}
+          final class $name(dispatcher: _root_.cats.effect.std.Dispatcher[${c.prefix}.F], callback: _root_.cats.effect.cps.AsyncAwaitDsl.AwaitCallback[${c.prefix}.F]) extends _root_.cats.effect.cps.AsyncAwaitStateMachine(dispatcher, callback)(${F}) {
+            ${mark(q"""override def apply(tr$$async: _root_.cats.effect.cps.AsyncAwaitDsl.AwaitOutcome[${c.prefix}.F]): _root_.scala.Unit = $body""")}
           }
-          ${c.prefix}._AsyncInstance.flatten {
-            _root_.cats.effect.std.Dispatcher[${c.prefix}._AsyncContext].use { dispatcher =>
-              ${c.prefix}._AsyncInstance.async_[${c.prefix}._AsyncContext[AnyRef]](cb => new $name(dispatcher, cb).start())
+          ${F}.flatten {
+            _root_.cats.effect.std.Dispatcher[${c.prefix}.F].use { dispatcher =>
+              ${F}.async_[${c.prefix}.F[AnyRef]](cb => new $name(dispatcher, cb).start())
             }
-          }.asInstanceOf[${c.macroApplication.tpe}]
+          }.asInstanceOf[${c.prefix}.F[$A]]
         """
         // format: on
-        c.Expr(tree)
+
+        c.Expr[F[A]](tree)
       } catch {
         case e: ReflectiveOperationException =>
           c.abort(
@@ -146,8 +154,8 @@ object AsyncAwaitDsl {
 
 abstract class AsyncAwaitStateMachine[F[_]](
     dispatcher: Dispatcher[F],
-    callback: AsyncAwaitDsl.AwaitCallback[F]
-)(implicit F: Async[F])
+    callback: AsyncAwaitDsl.AwaitCallback[F])(
+    implicit F: Async[F])
     extends Function1[AsyncAwaitDsl.AwaitOutcome[F], Unit] {
 
   // FSM translated method
