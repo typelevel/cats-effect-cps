@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Daniel Spiewak
+ * Copyright 2021 Typelevel
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,22 @@ name := "cats-effect-cps"
 ThisBuild / baseVersion := "0.1"
 
 ThisBuild / organization := "org.typelevel"
-ThisBuild / publishGithubUser := "djspiewak"
-ThisBuild / publishFullName := "Daniel Spiewak"
+ThisBuild / organizationName := "Typelevel"
+
+ThisBuild / developers := List(
+  Developer("djspiewak", "Daniel Spiewak", "@djspiewak", url("https://github.com/djspiewak")),
+  Developer("baccata", "Olivier Melois", "@baccata", url("https://github.com/baccata")))
 
 ThisBuild / crossScalaVersions := Seq("2.12.14", "2.13.6")
+
+val CatsEffectVersion = "3.1.0"
+
+scalacOptions += "-Xasync"
+
+libraryDependencies ++= Seq(
+  "org.typelevel" %% "cats-effect-std" % CatsEffectVersion,
+  "org.scala-lang" % "scala-reflect"   % scalaVersion.value % "provided",
+
+  "org.typelevel" %% "cats-effect"                % CatsEffectVersion % Test,
+  "org.typelevel" %% "cats-effect-testing-specs2" % "1.1.1"           % Test,
+  "org.specs2"    %% "specs2-core"                % "4.12.1"          % Test)
