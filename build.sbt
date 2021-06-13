@@ -29,12 +29,19 @@ ThisBuild / crossScalaVersions := Seq("2.12.14", "2.13.6")
 
 val CatsEffectVersion = "3.1.0"
 
-scalacOptions += "-Xasync"
+lazy val root = project.in(file(".")).aggregate(core.jvm, core.js).enablePlugins(NoPublishPlugin)
 
-libraryDependencies ++= Seq(
-  "org.typelevel" %% "cats-effect-std" % CatsEffectVersion,
-  "org.scala-lang" % "scala-reflect"   % scalaVersion.value % "provided",
+lazy val core = crossProject(JVMPlatform, JSPlatform)
+  .in(file("core"))
+  .settings(
+    name := "cats-effect-cps",
 
-  "org.typelevel" %% "cats-effect"                % CatsEffectVersion % Test,
-  "org.typelevel" %% "cats-effect-testing-specs2" % "1.1.1"           % Test,
-  "org.specs2"    %% "specs2-core"                % "4.12.1"          % Test)
+    scalacOptions += "-Xasync",
+
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-effect-std" % CatsEffectVersion,
+      "org.scala-lang" % "scala-reflect"   % scalaVersion.value % "provided",
+
+      "org.typelevel" %% "cats-effect"                % CatsEffectVersion % Test,
+      "org.typelevel" %% "cats-effect-testing-specs2" % "1.1.1"           % Test,
+      "org.specs2"    %% "specs2-core"                % "4.12.1"          % Test))
