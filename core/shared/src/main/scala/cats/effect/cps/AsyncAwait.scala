@@ -95,7 +95,8 @@ object AsyncAwaitDsl {
       c: blackbox.Context)(
       body: c.Expr[A])(
       F: c.Expr[Async[F]])(
-      implicit A: c.universe.WeakTypeTag[A])
+      implicit A: c.universe.WeakTypeTag[A],
+      FT: c.universe.WeakTypeTag[F[Any]])
       : c.Expr[F[A]] = {
     import c.universe._
     if (!c.compilerSettings.contains("-Xasync")) {
@@ -105,6 +106,29 @@ object AsyncAwaitDsl {
     } else
       try {
         val awaitSym = typeOf[dsl.type].decl(TermName("_await"))
+
+        val stateMachineSymbol = symbolOf[AsyncAwaitStateMachine[Any]]
+
+        // Iterating through all subtrees in the scope but stopping at anything that extends
+        // AsyncAwaitStateMachine (as it indicates the macro-expansion of a nested async region)
+        def rec(t: Tree): Iterator[c.Tree] = Iterator(t) ++ t.children.filter(_ match {
+          case ClassDef(_, _, _, Template(List(parent), _, _)) if parent.symbol == stateMachineSymbol =>
+            false
+          case _ =>
+            true
+        }).flatMap(rec(_))
+
+        // Checking each local `await` call to ensure that it matches the `F` in `async[F]`
+        val expectedEffect = FT.tpe.typeConstructor.dealias
+
+        rec(body.tree).foreach {
+          case tt @ c.universe.Apply(TypeApply(_, List(awaitEffect, _)), fun :: Nil) if tt.symbol == awaitSym =>
+            // awaitEffect is the F in `await[F, A](fa)`
+            if (!(awaitEffect.tpe =:= expectedEffect)){
+              c.abort(fun.pos, s"Expected await to be called on ${FT.tpe.dealias}, but got ${fun.tpe.dealias}")
+            }
+          case _ => ()
+        }
 
         def mark(t: DefDef): Tree = {
           c.internal
