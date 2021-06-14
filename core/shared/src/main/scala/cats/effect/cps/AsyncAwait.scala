@@ -95,9 +95,7 @@ object AsyncAwaitDsl {
       c: blackbox.Context)(
       body: c.Expr[A])(
       F: c.Expr[Async[F]])(
-      implicit A: c.universe.WeakTypeTag[A],
-      FT: c.universe.WeakTypeTag[F[Any]])
-      : c.Expr[F[A]] = {
+      implicit A: c.universe.WeakTypeTag[A]): c.Expr[F[A]] = {
     import c.universe._
     if (!c.compilerSettings.contains("-Xasync")) {
       c.abort(
@@ -119,13 +117,13 @@ object AsyncAwaitDsl {
         }).flatMap(rec(_))
 
         // Checking each local `await` call to ensure that it matches the `F` in `async[F]`
-        val expectedEffect = FT.tpe.typeConstructor.dealias
+        val expectedEffect = F.actualType.typeArgs.head
 
         rec(body.tree).foreach {
           case tt @ c.universe.Apply(TypeApply(_, List(awaitEffect, _)), fun :: Nil) if tt.symbol == awaitSym =>
             // awaitEffect is the F in `await[F, A](fa)`
             if (!(awaitEffect.tpe =:= expectedEffect)){
-              c.abort(fun.pos, s"Expected await to be called on ${FT.tpe.dealias}, but got ${fun.tpe.dealias}")
+              c.abort(fun.pos, s"Expected await to be called on ${expectedEffect}, but got ${fun.tpe.dealias}")
             }
           case _ => ()
         }
