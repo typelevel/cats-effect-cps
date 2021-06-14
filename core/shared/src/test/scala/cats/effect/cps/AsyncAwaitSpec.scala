@@ -217,6 +217,20 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
 
       tc must beEqualTo(TypecheckError("Expected await to be called on [β$0$]cats.data.OptionT[[+A]cats.effect.IO[A],β$0$], but got cats.effect.IO[Int]"))
     }
+
+    "respect nested async[G] calls" in {
+      val optionT = OptionT.liftF(IO(1))
+
+      val program =  async[IO]{
+        async[OptionTIO](optionT.await).value.await
+      }
+
+      program.flatMap { res =>
+        IO {
+          res must beEqualTo(Some(1))
+        }
+      }
+    }
   }
 
 }
