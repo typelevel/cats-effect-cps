@@ -214,8 +214,12 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
   "async[F]" should {
     "prevent compilation of await[G, *] calls" in {
       val tc = typecheck("async[OptionTIO](IO(1).await)").result
-
-      tc must beEqualTo(TypecheckError("Expected await to be called on [β$0$]cats.data.OptionT[[+A]cats.effect.IO[A],β$0$], but got cats.effect.IO[Int]"))
+      tc must beLike {
+        case TypecheckError(message) =>
+          message must contain("Expected await to be called on")
+          message must contain("cats.data.OptionT")
+          message must contain("but was called on cats.effect.IO[Int]")
+      }
     }
 
     "respect nested async[G] calls" in {
@@ -228,6 +232,16 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
       program.flatMap { res =>
         IO {
           res must beEqualTo(Some(1))
+        }
+      }
+    }
+
+    "allow for polymorphic usage" in {
+      def foo[F[_] : Async] = async[F]{ 1.pure[F].await }
+
+      foo[IO].flatMap { res =>
+        IO {
+          res must beEqualTo(1)
         }
       }
     }

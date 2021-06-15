@@ -35,11 +35,10 @@ import cats.syntax.all._
  * popularised in other programming languages.
  *
  * {{{
- * object dsl extends AsyncAwaitDsl[IO]
  * import dsl._
  *
  * val io: IO[Int] = ???
- * async { await(io) + await(io) }
+ * async[IO] { io.await + io.await }
  * }}}
  *
  * The code is transformed at compile time into a state machine
@@ -117,13 +116,13 @@ object AsyncAwaitDsl {
         }).flatMap(rec(_))
 
         // Checking each local `await` call to ensure that it matches the `F` in `async[F]`
-        val expectedEffect = F.actualType.typeArgs.head
+        val effect = F.actualType.typeArgs.head
 
         rec(body.tree).foreach {
           case tt @ c.universe.Apply(TypeApply(_, List(awaitEffect, _)), fun :: Nil) if tt.symbol == awaitSym =>
             // awaitEffect is the F in `await[F, A](fa)`
-            if (!(awaitEffect.tpe =:= expectedEffect)){
-              c.abort(fun.pos, s"Expected await to be called on ${expectedEffect}, but got ${fun.tpe.dealias}")
+            if (!(awaitEffect.tpe <:< effect)){
+              c.abort(fun.pos, s"Expected await to be called on ${effect}, but was called on ${fun.tpe.dealias}")
             }
           case _ => ()
         }
@@ -149,14 +148,14 @@ object AsyncAwaitDsl {
 
         // format: off
         val tree = q"""
-          final class $name(dispatcher: _root_.cats.effect.std.Dispatcher[${c.prefix}.F], callback: _root_.cats.effect.cps.AsyncAwaitDsl.AwaitCallback[${c.prefix}.F]) extends _root_.cats.effect.cps.AsyncAwaitStateMachine(dispatcher, callback)(${F}) {
-            ${mark(q"""override def apply(tr$$async: _root_.cats.effect.cps.AsyncAwaitDsl.AwaitOutcome[${c.prefix}.F]): _root_.scala.Unit = $body""")}
+          final class $name(dispatcher: _root_.cats.effect.std.Dispatcher[$effect], callback: _root_.cats.effect.cps.AsyncAwaitDsl.AwaitCallback[$effect]) extends _root_.cats.effect.cps.AsyncAwaitStateMachine(dispatcher, callback)(${F}) {
+            ${mark(q"""override def apply(tr$$async: _root_.cats.effect.cps.AsyncAwaitDsl.AwaitOutcome[$effect]): _root_.scala.Unit = $body""")}
           }
           ${F}.flatten {
-            _root_.cats.effect.std.Dispatcher[${c.prefix}.F].use { dispatcher =>
-              ${F}.async_[${c.prefix}.F[AnyRef]](cb => new $name(dispatcher, cb).start())
+            _root_.cats.effect.std.Dispatcher[$effect].use { dispatcher =>
+              ${F}.async_[$name#FF[AnyRef]](cb => new $name(dispatcher, cb).start())
             }
-          }.asInstanceOf[${c.prefix}.F[$A]]
+          }.asInstanceOf[$name#FF[$A]]
         """
         // format: on
 
@@ -179,6 +178,8 @@ abstract class AsyncAwaitStateMachine[F[_]](
     callback: AsyncAwaitDsl.AwaitCallback[F])(
     implicit F: Async[F])
     extends Function1[AsyncAwaitDsl.AwaitOutcome[F], Unit] {
+
+  type FF[A] = F[A]
 
   // FSM translated method
   //def apply(v1: AsyncAwaitDsl.AwaitOutcome[F]): Unit = ???
