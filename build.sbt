@@ -31,9 +31,9 @@ ThisBuild / developers := List(
   Developer("djspiewak", "Daniel Spiewak", "@djspiewak", url("https://github.com/djspiewak")),
   Developer("baccata", "Olivier Melois", "@baccata", url("https://github.com/baccata")))
 
-ThisBuild / crossScalaVersions := Seq("2.12.14", "2.13.6")
+ThisBuild / crossScalaVersions := Seq("2.12.14", "2.13.6", "3.0.0")
 
-val CatsEffectVersion = "3.1.0"
+val CatsEffectVersion = "3.1.1"
 
 lazy val root = project.in(file(".")).aggregate(core.jvm, core.js).enablePlugins(NoPublishPlugin)
 
@@ -42,12 +42,28 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
   .settings(
     name := "cats-effect-cps",
 
-    scalacOptions += "-Xasync",
+    scalacOptions ++= {
+      if (isDotty.value)
+        Seq()
+      else
+        Seq("-Xasync")
+    },
+
+    Compile / unmanagedSourceDirectories +=
+      (Compile / baseDirectory).value.getParentFile() / "shared" / "src" / "main" / s"scala-${scalaVersion.value.split('.').head}",
+
+    Test / unmanagedSourceDirectories +=
+      (Test / baseDirectory).value.getParentFile() / "shared" / "src" / "main" / s"scala-${scalaVersion.value.split('.').head}",
 
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-effect-std" % CatsEffectVersion,
-      "org.scala-lang" % "scala-reflect"   % scalaVersion.value % "provided",
+      "org.typelevel" %%% "cats-effect-std" % CatsEffectVersion,
 
-      "org.typelevel" %% "cats-effect"                % CatsEffectVersion % Test,
-      "org.typelevel" %% "cats-effect-testing-specs2" % "1.1.1"           % Test,
-      "org.specs2"    %% "specs2-core"                % "4.12.1"          % Test))
+      "org.typelevel" %%% "cats-effect"                % CatsEffectVersion % Test,
+      "org.typelevel" %%% "cats-effect-testing-specs2" % "1.1.1"           % Test),
+
+    libraryDependencies ++= {
+      if (isDotty.value)
+        Seq("com.github.rssh" %%% "dotty-cps-async" % "0.8.1")
+      else
+        Seq("org.scala-lang" % "scala-reflect"   % scalaVersion.value % "provided")
+    })
