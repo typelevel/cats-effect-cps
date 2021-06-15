@@ -155,7 +155,7 @@ object AsyncAwaitDsl {
             _root_.cats.effect.std.Dispatcher[$effect].use { dispatcher =>
               ${F}.async_[$name#FF[AnyRef]](cb => new $name(dispatcher, cb).start())
             }
-          }.asInstanceOf[$name#FF[$A]]
+          }.asInstanceOf[${c.macroApplication.tpe}]
         """
         // format: on
 
