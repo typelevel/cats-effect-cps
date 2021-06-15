@@ -43,7 +43,7 @@ for {
 Using cats-effect-cps, we can choose to rewrite the above in the following direct style:
 
 ```scala
-import cats.effect.cps.dsl._
+import cats.effect.cps._
 
 async[IO] {
   val results1 = talkToServer("request1", None).await
