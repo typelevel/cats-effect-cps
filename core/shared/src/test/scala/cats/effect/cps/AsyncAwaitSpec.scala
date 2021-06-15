@@ -21,7 +21,6 @@ import cats.data.{Kleisli, OptionT, WriterT}
 import cats.effect.testing.specs2.CatsEffect
 
 import org.specs2.mutable.Specification
-import org.specs2.execute._, Typecheck._
 
 import scala.concurrent.duration._
 

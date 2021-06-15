@@ -19,7 +19,6 @@ package cats.effect
 import scala.annotation.compileTimeOnly
 
 import cats.effect.cpsinternal.AsyncAwaitDsl
-import cats.effect.kernel.Async
 
 /**
  * WARNING: This construct currently only works on scala 2 (2.12.12+ / 2.13.3+),
@@ -65,7 +64,10 @@ object cps {
 
   final class PartiallyAppliedAsync[F0[_]] {
     type F[A] = F0[A]
-    def apply[A](body: => A)(implicit F: Async[F]): F[A] = macro AsyncAwaitDsl.asyncImpl[F, A]
+
+    // don't convert this into an import; it hits a bug in Scala 2.12
+    def apply[A](body: => A)(implicit F: cats.effect.kernel.Async[F]): F[A] =
+      macro AsyncAwaitDsl.asyncImpl[F, A]
   }
 }
 
