@@ -22,6 +22,7 @@ import cats.data.{Kleisli, OptionT, WriterT}
 import cats.effect.testing.specs2.CatsEffect
 
 import org.specs2.mutable.Specification
+import org.specs2.execute._, Typecheck._
 
 import scala.concurrent.duration._
 
@@ -29,7 +30,7 @@ import dsl._
 
 class AsyncAwaitSpec extends Specification with CatsEffect {
 
-  "IOAsyncAwait" should {
+  "async[IO]" should {
 
     "work on success" in {
 
@@ -120,7 +121,7 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
     }
   }
 
-  "KleisliAsyncAwait" should {
+  "async[Kleisli[IO, R, *]]" should {
     type F[A] = Kleisli[IO, Int, A]
 
     "work on successes" in {
@@ -136,13 +137,12 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
     }
   }
 
-  "OptionTAsyncAwait" should {
-    type F[A] = OptionT[IO, A]
+  "async[OptionT[IO, *]]" should {
 
     "work on successes" in {
-      val io = Temporal[F].sleep(100.millis) >> OptionT.pure[IO](1)
+      val io = Temporal[OptionT[IO, *]].sleep(100.millis) >> OptionT.pure[IO](1)
 
-      val program = async[F](io.await + io.await)
+      val program = async[OptionT[IO, *]](io.await + io.await)
 
       program.value.flatMap { res =>
         IO {
@@ -150,18 +150,6 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
         }
       }
     }
-
-/*    "work on successes2" in {
-      val io = Temporal[F].sleep(100.millis) >> OptionT.pure[IO](1)
-
-      val program = async[IO](io.await + io.await)
-
-      program/*.value*/.flatMap { res =>
-        IO {
-          res must beEqualTo(Some(2))
-        }
-      }
-    }*/
 
     "work on None" in {
       val io1 = OptionT.pure[IO](1)
@@ -177,7 +165,7 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
     }
   }
 
-  "Nested OptionT AsyncAwait" should {
+  "async[OptionT[OptionT[IO, *], *]" should {
     type F[A] = OptionT[OptionT[IO, *], A]
 
     "surface None at the right layer (1)" in {
@@ -206,7 +194,7 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
     }
   }
 
-  "WriterT AsyncAwait" should {
+  "async[WriterT[IO, T, *]]" should {
     type F[A] = WriterT[IO, Int, A]
 
     "surface logged " in {
@@ -220,7 +208,43 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
         }
       }
     }
+  }
 
+  type OptionTIO[A] = OptionT[IO, A]
+  "async[F]" should {
+    "prevent compilation of await[G, *] calls" in {
+      val tc = typecheck("async[OptionTIO](IO(1).await)").result
+      tc must beLike {
+        case TypecheckError(message) =>
+          message must contain("Expected await to be called on")
+          message must contain("cats.data.OptionT")
+          message must contain("but was called on cats.effect.IO[Int]")
+      }
+    }
+
+    "respect nested async[G] calls" in {
+      val optionT = OptionT.liftF(IO(1))
+
+      val program =  async[IO]{
+        async[OptionTIO](optionT.await).value.await
+      }
+
+      program.flatMap { res =>
+        IO {
+          res must beEqualTo(Some(1))
+        }
+      }
+    }
+
+    "allow for polymorphic usage" in {
+      def foo[F[_] : Async] = async[F]{ 1.pure[F].await }
+
+      foo[IO].flatMap { res =>
+        IO {
+          res must beEqualTo(1)
+        }
+      }
+    }
   }
 
 }
