@@ -15,28 +15,27 @@
  */
 
 package cats.effect
-package cps
-
 
 import cats.syntax.all._
 import cats.data.{Kleisli, OptionT, WriterT}
 import cats.effect.testing.specs2.CatsEffect
 
 import org.specs2.mutable.Specification
+import org.specs2.execute._, Typecheck._
 
 import scala.concurrent.duration._
 
+import cps._
+
 class AsyncAwaitSpec extends Specification with CatsEffect {
 
-  "IOAsyncAwait" should {
-    object IOAsyncAwait extends AsyncAwaitDsl[IO]
-    import IOAsyncAwait.{await => ioAwait, _}
+  "async[IO]" should {
 
     "work on success" in {
 
       val io = IO.sleep(100.millis) >> IO.pure(1)
 
-      val program = async(ioAwait(io) + ioAwait(io))
+      val program = async[IO](io.await + io.await)
 
       program.flatMap { res =>
         IO {
@@ -50,7 +49,7 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
       case object Boom extends Throwable
       val io = IO.raiseError[Int](Boom)
 
-      val program = async(ioAwait(io))
+      val program = async[IO](io.await)
 
       program.attempt.flatMap { res =>
         IO {
@@ -64,7 +63,7 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
       case object Boom extends Throwable
 
       def boom(): Unit = throw Boom
-      val program = async(boom())
+      val program = async[IO](boom())
 
       program.attempt.flatMap { res =>
         IO {
@@ -77,7 +76,7 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
 
       val io = IO.canceled
 
-      val program = async(ioAwait(io))
+      val program = async[IO](io.await)
 
       program.start.flatMap(_.join).flatMap { res =>
         IO {
@@ -90,9 +89,9 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
 
       val program = for {
         ref <- Ref[IO].of(0)
-        _ <- async {
-          ioAwait(IO.never[Unit])
-          ioAwait(ref.update(_ + 1))
+        _ <- async[IO] {
+          IO.never[Unit].await
+          ref.update(_ + 1).await
         }.start.flatMap(_.cancel)
         result <- ref.get
       } yield {
@@ -109,7 +108,7 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
 
     "suspend side effects" in {
       var x = 0
-      val program = async(x += 1)
+      val program = async[IO](x += 1)
 
       for {
         _ <- IO(x must beEqualTo(0))
@@ -121,15 +120,13 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
     }
   }
 
-  "KleisliAsyncAwait" should {
+  "async[Kleisli[IO, R, *]]" should {
     type F[A] = Kleisli[IO, Int, A]
-    object KleisliAsyncAwait extends AsyncAwaitDsl[F]
-    import KleisliAsyncAwait.{await => kAwait, _}
 
     "work on successes" in {
       val io = Temporal[F].sleep(100.millis) >> Kleisli(x => IO.pure(x + 1))
 
-      val program = async(kAwait(io) + kAwait(io))
+      val program = async[F](io.await + io.await)
 
       program.run(0).flatMap { res =>
         IO {
@@ -139,15 +136,12 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
     }
   }
 
-  "OptionTAsyncAwait" should {
-    type F[A] = OptionT[IO, A]
-    object OptionTAsyncAwait extends AsyncAwaitDsl[F]
-    import OptionTAsyncAwait.{await => oAwait, _}
+  "async[OptionT[IO, *]]" should {
 
     "work on successes" in {
-      val io = Temporal[F].sleep(100.millis) >> OptionT.pure[IO](1)
+      val io = Temporal[OptionT[IO, *]].sleep(100.millis) >> OptionT.pure[IO](1)
 
-      val program = async(oAwait(io) + oAwait(io))
+      val program = async[OptionT[IO, *]](io.await + io.await)
 
       program.value.flatMap { res =>
         IO {
@@ -160,7 +154,7 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
       val io1 = OptionT.pure[IO](1)
       val io2 = OptionT.none[IO, Int]
 
-      val program = async(oAwait(io1) + oAwait(io2))
+      val program = async[OptionT[IO, *]](io1.await + io2.await)
 
       program.value.flatMap { res =>
         IO {
@@ -170,15 +164,13 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
     }
   }
 
-  "Nested OptionT AsyncAwait" should {
+  "async[OptionT[OptionT[IO, *], *]" should {
     type F[A] = OptionT[OptionT[IO, *], A]
-    object NestedAsyncAwait extends AsyncAwaitDsl[F]
-    import NestedAsyncAwait.{await => oAwait, _}
 
     "surface None at the right layer (1)" in {
       val io = OptionT.liftF(OptionT.none[IO, Int])
 
-      val program = async(oAwait(io))
+      val program = async[F](io.await)
 
       program.value.value.flatMap { res =>
         IO {
@@ -191,7 +183,7 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
       val io1 = 1.pure[F]
       val io2 = OptionT.none[OptionT[IO, *], Int]
 
-      val program = async(oAwait(io1) + oAwait(io2))
+      val program = async[F](io1.await + io2.await)
 
       program.value.value.flatMap { res =>
         IO {
@@ -201,15 +193,13 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
     }
   }
 
-  "WriterT AsyncAwait" should {
+  "async[WriterT[IO, T, *]]" should {
     type F[A] = WriterT[IO, Int, A]
-    object WriterTAsyncAwait extends AsyncAwaitDsl[F]
-    import WriterTAsyncAwait.{await => wAwait, _}
 
     "surface logged " in {
       val io1 = WriterT(IO((1, 3)))
 
-      val program = async(wAwait(io1) * wAwait(io1))
+      val program = async[F](io1.await * io1.await)
 
       program.run.flatMap { res =>
         IO {
@@ -217,7 +207,43 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
         }
       }
     }
+  }
 
+  type OptionTIO[A] = OptionT[IO, A]
+  "async[F]" should {
+    "prevent compilation of await[G, *] calls" in {
+      val tc = typecheck("async[OptionTIO](IO(1).await)").result
+      tc must beLike {
+        case TypecheckError(message) =>
+          message must contain("expected await to be called on")
+          message must contain("cats.data.OptionT")
+          message must contain("but was called on cats.effect.IO[Int]")
+      }
+    }
+
+    "respect nested async[G] calls" in {
+      val optionT = OptionT.liftF(IO(1))
+
+      val program =  async[IO]{
+        async[OptionTIO](optionT.await).value.await
+      }
+
+      program.flatMap { res =>
+        IO {
+          res must beEqualTo(Some(1))
+        }
+      }
+    }
+
+    "allow for polymorphic usage" in {
+      def foo[F[_] : Async] = async[F]{ 1.pure[F].await }
+
+      foo[IO].flatMap { res =>
+        IO {
+          res must beEqualTo(1)
+        }
+      }
+    }
   }
 
 }

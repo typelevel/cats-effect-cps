@@ -45,21 +45,18 @@ Using cats-effect-cps, we can choose to rewrite the above in the following direc
 ```scala
 import cats.effect.cps._
 
-val dsl = new AsyncAwaitDsl[IO]
-import dsl._
+async[IO] {
+  val results1 = talkToServer("request1", None).await
+  IO.sleep(100.millis).await
 
-async {
-  val results1 = await(talkToServer("request1", None))
-  await(IO.sleep(100.millis))
-
-  val results2 = await(talkToServer("request2", Some(results1.data)))
+  val results2 = talkToServer("request2", Some(results1.data)).await
 
   if (results2.isOK) {
-    await(writeToFile(results2.data))
-    await(IO.println("done!"))
+    writeToFile(results2.data).await
+    IO.println("done!").await
     true
   } else {
-    await(IO.println("abort abort abort"))
+    IO.println("abort abort abort").await
     false
   }
 }
