@@ -15,7 +15,6 @@
  */
 
 package cats.effect
-package cps
 
 import cats.syntax.all._
 import cats.data.{Kleisli, OptionT, WriterT}
@@ -26,7 +25,7 @@ import org.specs2.execute._, Typecheck._
 
 import scala.concurrent.duration._
 
-import dsl._
+import cps._
 
 class AsyncAwaitSpec extends Specification with CatsEffect {
 
@@ -216,7 +215,7 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
       val tc = typecheck("async[OptionTIO](IO(1).await)").result
       tc must beLike {
         case TypecheckError(message) =>
-          message must contain("Expected await to be called on")
+          message must contain("expected await to be called on")
           message must contain("cats.data.OptionT")
           message must contain("but was called on cats.effect.IO[Int]")
       }
