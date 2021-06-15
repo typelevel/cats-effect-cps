@@ -93,8 +93,7 @@ object AsyncAwaitDsl {
   def asyncImpl[F[_], A](
       c: blackbox.Context)(
       body: c.Expr[A])(
-      F: c.Expr[Async[F]])(
-      implicit A: c.universe.WeakTypeTag[A]): c.Expr[F[A]] = {
+      F: c.Expr[Async[F]]): c.Expr[F[A]] = {
     import c.universe._
     if (!c.compilerSettings.contains("-Xasync")) {
       c.abort(
