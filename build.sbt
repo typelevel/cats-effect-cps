@@ -21,6 +21,12 @@ ThisBuild / baseVersion := "0.1"
 ThisBuild / organization := "org.typelevel"
 ThisBuild / organizationName := "Typelevel"
 
+ThisBuild / homepage := Some(url("https://github.com/typelevel/cats-effect-cps"))
+ThisBuild / scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/typelevel/cats-effect-cps"),
+    "scm:git@github.com:typelevel/cats-effect-cps.git"))
+
 ThisBuild / developers := List(
   Developer("djspiewak", "Daniel Spiewak", "@djspiewak", url("https://github.com/djspiewak")),
   Developer("baccata", "Olivier Melois", "@baccata", url("https://github.com/baccata")))
