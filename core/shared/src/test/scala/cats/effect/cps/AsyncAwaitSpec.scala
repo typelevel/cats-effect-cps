@@ -21,7 +21,6 @@ import cats.data.{Kleisli, OptionT, WriterT}
 import cats.effect.testing.specs2.CatsEffect
 
 import org.specs2.mutable.Specification
-import org.specs2.execute._, Typecheck._
 
 import scala.concurrent.duration._
 
@@ -211,16 +210,6 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
 
   type OptionTIO[A] = OptionT[IO, A]
   "async[F]" should {
-    "prevent compilation of await[G, *] calls" in {
-      val tc = typecheck("async[OptionTIO](IO(1).await)").result
-      tc must beLike {
-        case TypecheckError(message) =>
-          message must contain("expected await to be called on")
-          message must contain("cats.data.OptionT")
-          message must contain("but was called on cats.effect.IO[Int]")
-      }
-    }
-
     "respect nested async[G] calls" in {
       val optionT = OptionT.liftF(IO(1))
 
@@ -245,5 +234,4 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
       }
     }
   }
-
 }

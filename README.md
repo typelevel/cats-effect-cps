@@ -6,16 +6,18 @@ This is an incubator library for `async`/`await` syntax in Cats Effect, currentl
 
 "CPS" stands for "[Continuation Passing Style](https://en.wikipedia.org/wiki/Continuation-passing_style)". Related project targeting Scala 3: [rssh/cps-async-connect](https://github.com/rssh/cps-async-connect). This functionality is quite similar to similar functionality in [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/async_function), [Rust](https://rust-lang.github.io/async-book/01_getting_started/04_async_await_primer.html), [Kotlin](https://kotlinlang.org/docs/composing-suspending-functions.html), and many other languages. The primary difference being that, in this library, the `async` marker is a *lexical block*, whereas in other languages the marker is usually a modifier applied at the function level.
 
-Special thanks to [Jason Zaugg](https://github.com/retronym) for his work on the implementation of `-Xasync` within scalac.
+Special thanks to [Jason Zaugg](https://github.com/retronym) for his work on the implementation of `-Xasync` within scalac. Also [Ruslan Shevchenko](https://github.com/rssh) for his work on dotty-cps-async.
 
 ## Usage
 
 ```sbt
 libraryDependencies += "org.typelevel" %% "cats-effect-cps" % "<version>"
-scalacOptions += "-Xasync"  // required to enable compiler support
+
+// if on Scala 2
+scalacOptions += "-Xasync"  // required to enable compiler support on Scala 2
 ```
 
-Published for Scala 2.13 and 2.12, cross-build with ScalaJS 1.6. Depends on Cats Effect 3.1.0 or higher.
+Published for Scala 2.13, 2.12, and 3.0, cross-build with ScalaJS 1.6. Depends on Cats Effect 3.1.0 or higher. Scala 3 support depends on [dotty-cps-async](https://github.com/rssh/dotty-cps-async) 0.8.1.
 
 ## Example
 
