@@ -306,6 +306,15 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
         }
       }
     }
+
+    "protects against ill-use of definitions" in {
+      val tc = typecheck("parallel[IO]{val a = 1; IO(a).await}").result
+      val expectedMsg = "Cannot await an effect that uses `value a` defined within the parallel {...} block"
+      tc must beLike {
+        case TypecheckError(message) =>
+          message must beEqualTo(expectedMsg)
+      }
+    }
   }
 
 }
