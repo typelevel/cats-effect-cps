@@ -67,5 +67,18 @@ object cps {
     type F[A] = F0[A]
     def apply[A](body: => A)(implicit F: Async[F]): F[A] = macro AsyncAwaitDsl.asyncImpl[F, A]
   }
+
+  /**
+   * Run the block of code `body` by parallelising all `F`s that are wrapped in "await".
+   * This is translated into a call to `parMapN`.
+   *
+   * Any term (val, var, def) defined in the `parallel` block cannot be used within `await` blocks.
+   */
+  def parallel[F[_]]: PartiallyAppliedParallel[F] = new PartiallyAppliedParallel[F]
+
+  final class PartiallyAppliedParallel[F0[_]] {
+    type F[A] = F0[A]
+    def apply[A](body: => A)(implicit F: Async[F]): F[A] = macro AsyncAwaitDsl.parallelImpl[F, A]
+  }
 }
 

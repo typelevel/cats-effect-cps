@@ -246,4 +246,66 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
     }
   }
 
+  "parallel[IO]" should {
+    "allow for parallel composition" in {
+
+      val program = Deferred[IO, Int].flatMap { promise =>
+        parallel[IO] {
+          val res = promise.get.await
+          val _ = promise.complete(1).await
+          res
+        }
+      }
+
+      program.flatMap { res =>
+        IO {
+          res must beEqualTo(1)
+        }
+      }
+    }
+
+    "suspend side effects" in {
+
+      var x = 0
+      // the expansion of "parallel" differs based on how many awaits are called (0, 1, 2+)
+      val program1 = parallel[IO] { x += 1 }
+      val program2 = parallel[IO] { x += 1; IO.pure(1).await }
+      val program3 = parallel[IO] { x += 1; IO.pure(1).await + IO.pure(1).await }
+
+      for {
+        _ <- IO(x must beEqualTo(0))
+        _ <- program1
+        _ <- IO(x must beEqualTo(1))
+        _ <- program2
+        _ <- IO(x must beEqualTo(2))
+        _ <- program3
+        _ <- IO(x must beEqualTo(3))
+      } yield ok
+    }
+
+    "prevent compilation of await[G, *] calls" in {
+      val tc = typecheck("parallel[OptionTIO](IO(1).await)").result
+      tc must beLike {
+        case TypecheckError(message) =>
+          message must contain("expected await to be called on")
+          message must contain("cats.data.OptionT")
+          message must contain("but was called on cats.effect.IO[Int]")
+      }
+    }
+
+    "respect nested async[G] calls" in {
+      val optionT = OptionT.liftF(IO(1))
+
+      val program =  parallel[IO]{
+        async[OptionTIO](optionT.await).value.await
+      }
+
+      program.flatMap { res =>
+        IO {
+          res must beEqualTo(Some(1))
+        }
+      }
+    }
+  }
+
 }

@@ -50,28 +50,8 @@ object AsyncAwaitDsl {
       try {
         val awaitSym = typeOf[cats.effect.cps.type].decl(TermName("_await"))
 
-        val stateMachineSymbol = symbolOf[AsyncAwaitStateMachine[Any]]
-
-        // Iterating through all subtrees in the scope but stopping at anything that extends
-        // AsyncAwaitStateMachine (as it indicates the macro-expansion of a nested async region)
-        def rec(t: Tree): Iterator[c.Tree] = Iterator(t) ++ t.children.filter(_ match {
-          case ClassDef(_, _, _, Template(List(parent), _, _)) if parent.symbol == stateMachineSymbol =>
-            false
-          case _ =>
-            true
-        }).flatMap(rec(_))
-
-        // Checking each local `await` call to ensure that it matches the `F` in `async[F]`
         val effect = F.actualType.typeArgs.head
-
-        rec(body.tree).foreach {
-          case tt @ c.universe.Apply(TypeApply(_, List(awaitEffect, _)), fun :: Nil) if tt.symbol == awaitSym =>
-            // awaitEffect is the F in `await[F, A](fa)`
-            if (!(awaitEffect.tpe <:< effect)){
-              c.abort(fun.pos, s"expected await to be called on ${effect}, but was called on ${fun.tpe.dealias}")
-            }
-          case _ => ()
-        }
+        typeCheckEffects(c)(effect, body.tree)
 
         def mark(t: DefDef): Tree = {
           c.internal
@@ -116,4 +96,91 @@ object AsyncAwaitDsl {
           )
       }
   }
+
+  def parallelImpl[F[_], T](c: blackbox.Context)(body: c.Expr[T])(F: c.Expr[Async[F]]): c.Expr[F[T]] = {
+    import c.universe._
+
+    def rec(t: Tree): Iterator[c.Tree] = Iterator(t) ++ t.children.flatMap(rec(_))
+
+    val bound = collection.mutable.Buffer.empty[(c.Tree, ValDef)]
+    val awaitSym = typeOf[cats.effect.cps.type].decl(TermName("_await"))
+
+    val effect = F.actualType.typeArgs.head
+    typeCheckEffects(c)(effect, body.tree)
+
+    // Derived from @olafurpg's
+    // https://gist.github.com/olafurpg/596d62f87bf3360a29488b725fbc7608
+    val defs = rec(body.tree).filter(_.isDef).map(_.symbol).toSet
+
+    val transformed = c.internal.typingTransform(body.tree) {
+      case (tt @ c.universe.Apply(_, fun :: Nil), _) if tt.symbol == awaitSym =>
+        val localDefs = rec(fun).filter(_.isDef).map(_.symbol).toSet
+        val banned = rec(tt).filter(x => defs(x.symbol) && !localDefs(x.symbol))
+
+        if (banned.hasNext) {
+          val banned0 = banned.next()
+          c.abort(
+            banned0.pos,
+            "Cannot await an effect that uses `" + banned0.symbol + "` defined within the parallel {...} block"
+          )
+        }
+        val tempName = c.freshName(TermName("tmp"))
+        val tempSym =
+          c.internal.newTermSymbol(c.internal.enclosingOwner, tempName)
+        c.internal.setInfo(tempSym, tt.tpe)
+        val tempIdent = Ident(tempSym)
+        c.internal.setType(tempIdent, tt.tpe)
+        c.internal.setFlag(tempSym, (1L << 44).asInstanceOf[c.universe.FlagSet])
+        bound.append((fun, c.internal.valDef(tempSym)))
+        tempIdent
+      case (tt, api) => api.default(tt)
+    }
+
+    val (exprs, bindings) = bound.unzip
+    val resVal = c.freshName(TermName("res"))
+    val callback =
+      c.typecheck(
+        q"(..$bindings) => $F.delay { val $resVal = $transformed; $resVal }")
+    val parMapMethod = TermName("parMap" + exprs.size)
+    val res = if (exprs.size >= 2) {
+      q"""
+        _root_.cats.Parallel.$parMapMethod(..$exprs)($callback)(cats.effect.kernel.instances.spawn.parallelForGenSpawn($F)).flatten
+      """
+    } else if (exprs.size == 1) {
+      q"""$F.flatMap(..${exprs.head})($callback)"""
+    } else {
+      q"""$callback()"""
+    }
+
+    c.internal.changeOwner(transformed, c.internal.enclosingOwner, callback.symbol)
+
+    c.Expr[F[T]](res)
+  }
+
+  // Checking each local `await` call to ensure that it matches the `F` in `async[F]`,
+  // by iterating through all subtrees in the scope but stopping at anything that extends
+  // AsyncAwaitStateMachine (as it indicates the macro-expansion of a nested async region)
+  private[this] def typeCheckEffects(c: blackbox.Context)(effect: c.universe.Type, body: c.universe.Tree) : Unit = {
+    import c.universe._
+    val stateMachineSymbol = symbolOf[AsyncAwaitStateMachine[Any]]
+    val awaitSym = typeOf[cats.effect.cps.type].decl(TermName("_await"))
+
+    def rec(t: Tree): Iterator[Tree] = Iterator(t) ++ t.children.filter(_ match {
+        case ClassDef(_, _, _, Template(List(parent), _, _)) if parent.symbol == stateMachineSymbol =>
+          false
+        case _ =>
+          true
+    }).flatMap(rec(_))
+
+
+    rec(body).foreach {
+      case tt @ c.universe.Apply(TypeApply(_, List(awaitEffect, _)), fun :: Nil) if tt.symbol == awaitSym =>
+        // awaitEffect is the F in `await[F, A](fa)`
+        if (!(awaitEffect.tpe <:< effect)){
+          c.abort(fun.pos, s"expected await to be called on ${effect}, but was called on ${fun.tpe.dealias}")
+        }
+      case _ => ()
+    }
+  }
+
 }
