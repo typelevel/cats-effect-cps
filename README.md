@@ -17,7 +17,7 @@ scalacOptions += "-Xasync"  // required to enable compiler support
 
 Published for Scala 2.13 and 2.12, cross-build with ScalaJS 1.6. Depends on Cats Effect 3.1.0 or higher.
 
-## Example
+## Example (sequential)
 
 Consider the following program written using a `for`-comprehension (pretend `talkToServer` and `writeToFile` exist and do the obvious things, likely asynchronously):
 
@@ -63,3 +63,25 @@ async[IO] {
 ```
 
 There are no meaningful performance differences between these two encodings. They do almost exactly the same thing using different syntax, similar to how `for`-comprehensions are actually `flatMap` and `map` functions under the surface.
+
+## Example (parallel)
+
+cats-effect-cps also provides syntactic sugar for parallel composition :
+
+```scala
+import cats.effect._
+import cats.effect.cps._
+
+parallel[IO] {
+  getPopulation("Berlin").await + getPopulation("Amsterdam").await
+}
+```
+
+This gets rewritten to roughly this expresion:
+
+```scala
+import cats.effect._
+import cats.syntax.all._
+
+(getPopulation("Paris"), getPopulation("Amsterdam")).parMapN((p, a) => (p + a))
+```
