@@ -16,7 +16,7 @@
 
 name := "cats-effect-cps"
 
-ThisBuild / baseVersion := "0.2"
+ThisBuild / baseVersion := "0.3"
 
 ThisBuild / organization := "org.typelevel"
 ThisBuild / organizationName := "Typelevel"
@@ -63,7 +63,7 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
 
     libraryDependencies ++= {
       if (isDotty.value)
-        Seq("com.github.rssh" %%% "dotty-cps-async" % "0.8.1")
+        Seq("com.github.rssh" %%% "dotty-cps-async" % "0.9.0")
       else
         Seq("org.scala-lang" % "scala-reflect"   % scalaVersion.value % "provided")
     })
