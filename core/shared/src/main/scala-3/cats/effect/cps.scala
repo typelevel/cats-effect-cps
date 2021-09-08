@@ -16,7 +16,7 @@
 
 package cats.effect
 
-import _root_.cps.{async, await, CpsAsyncMonad, CpsAwaitable, CpsConcurrentEffectMonad, CpsMonad, CpsMonadPureMemoization}
+import _root_.cps.{async, await, CpsAsyncMonad, CpsAwaitable, CpsConcurrentEffectMonad, CpsMonad, CpsMonadMemoization}
 
 import cats.effect.kernel.{Async, Concurrent, Fiber, Sync}
 import cats.effect.kernel.syntax.all._
@@ -33,8 +33,8 @@ object cps {
       _root_.cps.await[F, A](self)
   }
 
-  implicit def catsEffectCpsMonadPureMemoization[F[_]](implicit F: Concurrent[F]): CpsMonadPureMemoization[F] =
-    new CpsMonadPureMemoization[F] {
+  implicit def catsEffectCpsMonadPureMemoization[F[_]](implicit F: Concurrent[F]): CpsMonadMemoization.Pure[F] =
+    new CpsMonadMemoization.Pure[F] {
       def apply[A](fa: F[A]): F[F[A]] = F.memoize(fa)
     }
 

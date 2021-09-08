@@ -63,7 +63,7 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
 
     libraryDependencies ++= {
       if (isDotty.value)
-        Seq("com.github.rssh" %%% "dotty-cps-async" % "0.9.2")
+        Seq("com.github.rssh" %%% "dotty-cps-async" % "0.9.3")
       else
         Seq("org.scala-lang" % "scala-reflect"   % scalaVersion.value % "provided")
     })
