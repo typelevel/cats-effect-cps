@@ -213,7 +213,7 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
     "respect nested async[G] calls" in {
       val optionT = OptionT.liftF(IO(1))
 
-      val program =  async[IO]{
+      val program = async[IO]{
         async[OptionTIO](optionT.await).value.await
       }
 
