@@ -31,7 +31,7 @@ ThisBuild / developers := List(
   Developer("djspiewak", "Daniel Spiewak", "@djspiewak", url("https://github.com/djspiewak")),
   Developer("baccata", "Olivier Melois", "@baccata", url("https://github.com/baccata")))
 
-ThisBuild / crossScalaVersions := Seq("2.12.14", "2.13.7", "3.0.2")
+ThisBuild / crossScalaVersions := Seq("2.12.15", "2.13.7", "3.0.2")
 
 val CatsEffectVersion = "3.3.0"
 
