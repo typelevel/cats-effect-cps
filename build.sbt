@@ -31,9 +31,9 @@ ThisBuild / developers := List(
   Developer("djspiewak", "Daniel Spiewak", "@djspiewak", url("https://github.com/djspiewak")),
   Developer("baccata", "Olivier Melois", "@baccata", url("https://github.com/baccata")))
 
-ThisBuild / crossScalaVersions := Seq("2.12.15", "2.13.7", "3.1.0")
+ThisBuild / crossScalaVersions := Seq("2.12.15", "2.13.8", "3.0.2")
 
-val CatsEffectVersion = "3.3.0"
+val CatsEffectVersion = "3.3.4"
 
 lazy val root = project.in(file(".")).aggregate(core.jvm, core.js).enablePlugins(NoPublishPlugin)
 
