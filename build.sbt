@@ -21,6 +21,9 @@ ThisBuild / baseVersion := "0.3"
 ThisBuild / organization := "org.typelevel"
 ThisBuild / organizationName := "Typelevel"
 
+ThisBuild / startYear := Some(2021)
+ThisBuild / endYear := Some(2022)
+
 ThisBuild / homepage := Some(url("https://github.com/typelevel/cats-effect-cps"))
 ThisBuild / scmInfo := Some(
   ScmInfo(
