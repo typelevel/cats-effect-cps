@@ -16,7 +16,7 @@
 
 name := "cats-effect-cps"
 
-ThisBuild / baseVersion := "0.3"
+ThisBuild / baseVersion := "0.4"
 
 ThisBuild / organization := "org.typelevel"
 ThisBuild / organizationName := "Typelevel"
