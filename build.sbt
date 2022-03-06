@@ -16,10 +16,13 @@
 
 name := "cats-effect-cps"
 
-ThisBuild / baseVersion := "0.3"
+ThisBuild / baseVersion := "0.4"
 
 ThisBuild / organization := "org.typelevel"
 ThisBuild / organizationName := "Typelevel"
+
+ThisBuild / startYear := Some(2021)
+ThisBuild / endYear := Some(2022)
 
 ThisBuild / homepage := Some(url("https://github.com/typelevel/cats-effect-cps"))
 ThisBuild / scmInfo := Some(
@@ -63,7 +66,7 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
 
     libraryDependencies ++= {
       if (isDotty.value)
-        Seq("com.github.rssh" %%% "dotty-cps-async" % "0.9.3")
+        Seq("com.github.rssh" %%% "dotty-cps-async" % "0.9.8")
       else
         Seq("org.scala-lang" % "scala-reflect"   % scalaVersion.value % "provided")
     })
