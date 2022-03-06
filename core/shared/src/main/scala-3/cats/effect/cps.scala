@@ -16,7 +16,7 @@
 
 package cats.effect
 
-import _root_.cps.{async, await, CpsAsyncMonad, CpsAwaitable, CpsConcurrentEffectMonad, CpsMonad, CpsMonadMemoization}
+import _root_.cps.{async, await, CpsAsyncMonad, CpsAwaitable, CpsConcurrentEffectMonad, CpsMonad, CpsMonadContext, CpsMonadInstanceContext, CpsMonadMemoization}
 
 import cats.effect.kernel.{Async, Concurrent, Fiber, Sync}
 import cats.effect.kernel.syntax.all._
@@ -25,12 +25,10 @@ import scala.util.Try
 
 object cps {
 
-  inline def async[F[_]](using inline am: CpsMonad[F]): _root_.cps.macros.Async.InferAsyncArg[F] =
-    new _root_.cps.macros.Async.InferAsyncArg[F]
+  transparent inline def async[F[_]](using CpsMonad[F]) = _root_.cps.macros.Async.async[F]
 
-  final implicit class AwaitSyntax[F[_], A](val self: F[A]) extends AnyVal {
-    transparent inline def await(using inline am: CpsAwaitable[F]): A =
-      _root_.cps.await[F, A](self)
+  extension [F[_], A](self: F[A])(using CpsAwaitable[F], CpsMonadContext[F]) {
+    transparent inline def await: A = _root_.cps.await[F, A, F](self)
   }
 
   implicit def catsEffectCpsMonadPureMemoization[F[_]](implicit F: Concurrent[F]): CpsMonadMemoization.Pure[F] =
@@ -39,8 +37,8 @@ object cps {
     }
 
   // TODO we can actually provide some more gradient instances here
-  implicit def catsEffectCpsConcurrentMonad[F[_]](implicit F: Async[F]): CpsConcurrentEffectMonad[F] =
-    new CpsConcurrentEffectMonad[F] {
+  implicit def catsEffectCpsConcurrentMonad[F[_]](implicit F: Async[F]): CpsConcurrentEffectMonad[F] with CpsMonadInstanceContext[F] =
+    new CpsConcurrentEffectMonad[F] with CpsMonadInstanceContext[F] {
 
       type Spawned[A] = Fiber[F, Throwable, A]
 
