@@ -2,9 +2,9 @@
 <!-- [![Latest version](https://index.scala-lang.org/typelevel/cats-effect/cats-effect/latest.svg?color=orange)](https://index.scala-lang.org/typelevel/cats-effect/cats-effect) -->
 [![Discord](https://img.shields.io/discord/632277896739946517.svg?label=&logo=discord&logoColor=ffffff&color=404244&labelColor=6A7EC2)](https://discord.gg/QNnHKHq5Ts)
 
-This is an incubator library for `async`/`await` syntax in Cats Effect, currently targeting Scala 2 exclusively (due to missing compiler support in Scala 3). The `async`/`await` functionality within the Scala compiler is *itself* quite experimental, and thus this library should also be considered experimental until upstream support stabilizes. Once that happens and this implementation is considered to be finalized, the functionality in this library will be folded into Cats Effect itself and this library will be archived.
+This is a prototype library for `async`/`await` syntax in Cats Effect, currently targeting Scala 2's native `-Xasync` support and building on [dotty-cps-async](https://github.com/rssh/dotty-cps-async) for Scala 3. The `async`/`await` functionality within the Scala compiler is *itself* quite experimental, and thus this library should also be considered experimental until upstream support stabilizes. Once that happens and this implementation is considered to be finalized, the functionality in this library will be folded into Cats Effect itself and this library will be archived.
 
-"CPS" stands for "[Continuation Passing Style](https://en.wikipedia.org/wiki/Continuation-passing_style)". Related project targeting Scala 3: [rssh/cps-async-connect](https://github.com/rssh/cps-async-connect). This functionality is quite similar to similar functionality in [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/async_function), [Rust](https://rust-lang.github.io/async-book/01_getting_started/04_async_await_primer.html), [Kotlin](https://kotlinlang.org/docs/composing-suspending-functions.html), and many other languages. The primary difference being that, in this library, the `async` marker is a *lexical block*, whereas in other languages the marker is usually a modifier applied at the function level.
+"CPS" stands for "[Continuation Passing Style](https://en.wikipedia.org/wiki/Continuation-passing_style)". This functionality is quite similar to similar functionality in [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/async_function), [Rust](https://rust-lang.github.io/async-book/01_getting_started/04_async_await_primer.html), [Kotlin](https://kotlinlang.org/docs/composing-suspending-functions.html), and many other languages. The primary difference being that, in this library, the `async` marker is a *lexical block*, whereas in other languages the marker is usually a modifier applied at the function level.
 
 Special thanks to [Jason Zaugg](https://github.com/retronym) for his work on the implementation of `-Xasync` within scalac. Also [Ruslan Shevchenko](https://github.com/rssh) for his work on dotty-cps-async.
 
@@ -17,7 +17,7 @@ libraryDependencies += "org.typelevel" %% "cats-effect-cps" % "<version>"
 scalacOptions += "-Xasync"  // required to enable compiler support on Scala 2
 ```
 
-Published for Scala 2.13, 2.12, and 3.0, cross-build with ScalaJS 1.6. Depends on Cats Effect 3.1.0 or higher. Scala 3 support depends on [dotty-cps-async](https://github.com/rssh/dotty-cps-async) 0.8.1.
+Published for Scala 2.13, 2.12, and 3.0, cross-build with ScalaJS 1.8. Depends on Cats Effect 3.3.0 or higher. Scala 3 support depends on [dotty-cps-async](https://github.com/rssh/dotty-cps-async) 0.8.1.
 
 ## Example
 
