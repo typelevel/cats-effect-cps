@@ -38,9 +38,9 @@ ThisBuild / crossScalaVersions := Seq("2.12.17", "2.13.10", "3.2.0")
 
 val CatsEffectVersion = "3.3.14"
 
-lazy val root = project.in(file(".")).aggregate(core.jvm, core.js).enablePlugins(NoPublishPlugin)
+lazy val root = project.in(file(".")).aggregate(core.jvm, core.js, core.native).enablePlugins(NoPublishPlugin)
 
-lazy val core = crossProject(JVMPlatform, JSPlatform)
+lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
   .in(file("core"))
   .settings(
     name := "cats-effect-cps",
@@ -52,17 +52,12 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
         Seq("-Xasync")
     },
 
-    Compile / unmanagedSourceDirectories +=
-      (Compile / baseDirectory).value.getParentFile() / "shared" / "src" / "main" / s"scala-${scalaVersion.value.split('.').head}",
-
-    Test / unmanagedSourceDirectories +=
-      (Test / baseDirectory).value.getParentFile() / "shared" / "src" / "main" / s"scala-${scalaVersion.value.split('.').head}",
-
+    resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-effect-std" % CatsEffectVersion,
 
       "org.typelevel" %%% "cats-effect"                % CatsEffectVersion % Test,
-      "org.typelevel" %%% "cats-effect-testing-specs2" % "1.4.0"           % Test),
+      "org.typelevel" %%% "cats-effect-testing-specs2" % "1.5-93cc5e3-SNAPSHOT" % Test),
 
     libraryDependencies ++= {
       if (isDotty.value)
