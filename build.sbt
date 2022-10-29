@@ -65,3 +65,6 @@ lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
       else
         Seq("org.scala-lang" % "scala-reflect"   % scalaVersion.value % "provided")
     })
+    .nativeSettings(
+      crossScalaVersions := (ThisBuild / crossScalaVersions).value.filter(_.startsWith("3."))
+    )
