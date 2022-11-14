@@ -36,7 +36,7 @@ ThisBuild / developers := List(
 
 ThisBuild / crossScalaVersions := Seq("2.12.17", "2.13.10", "3.2.0")
 
-val CatsEffectVersion = "3.3.14"
+val CatsEffectVersion = "3.4.0"
 
 lazy val root = project.in(file(".")).aggregate(core.jvm, core.js, core.native).enablePlugins(NoPublishPlugin)
 

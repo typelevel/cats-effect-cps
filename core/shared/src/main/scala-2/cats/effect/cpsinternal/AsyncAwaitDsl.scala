@@ -98,7 +98,7 @@ object AsyncAwaitDsl {
             ${mark(q"""override def apply(tr$$async: _root_.cats.effect.cpsinternal.AsyncAwaitDsl.AwaitOutcome[$effect]): _root_.scala.Unit = $body""")}
           }
           ${F}.flatten {
-            _root_.cats.effect.std.Dispatcher[$effect].use { dispatcher =>
+            _root_.cats.effect.std.Dispatcher.sequential[$effect].use { dispatcher =>
               ${F}.async_[$name#FF[AnyRef]](cb => new $name(dispatcher, cb).start())
             }
           }.asInstanceOf[${c.macroApplication.tpe}]
