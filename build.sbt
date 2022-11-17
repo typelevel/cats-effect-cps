@@ -57,11 +57,11 @@ lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
       "org.typelevel" %%% "cats-effect-std" % CatsEffectVersion,
 
       "org.typelevel" %%% "cats-effect"                % CatsEffectVersion % Test,
-      "org.typelevel" %%% "cats-effect-testing-specs2" % "1.5-93cc5e3-SNAPSHOT" % Test),
+      "org.typelevel" %%% "cats-effect-testing-specs2" % "1.5.0" % Test),
 
     libraryDependencies ++= {
       if (isDotty.value)
-        Seq("com.github.rssh" %%% "dotty-cps-async" % "0.9.9")
+        Seq("com.github.rssh" %%% "dotty-cps-async" % "0.9.11")
       else
         Seq("org.scala-lang" % "scala-reflect"   % scalaVersion.value % "provided")
     })
