@@ -37,7 +37,7 @@ import cats.effect.cpsinternal.AsyncAwaitDsl
  * }}}
  *
  * The code is transformed at compile time into a state machine
- * that sequentially calls upon a [[Dispatcher]] every time it reaches
+ * that sequentially calls upon a [[cats.effect.std.Dispatcher]] every time it reaches
  * an "await" block.
  */
 object cps {
