@@ -16,43 +16,39 @@
 
 name := "cats-effect-cps"
 
-ThisBuild / baseVersion := "0.4"
-
-ThisBuild / organization := "org.typelevel"
-ThisBuild / organizationName := "Typelevel"
+ThisBuild / tlBaseVersion := "0.4"
 
 ThisBuild / startYear := Some(2021)
-ThisBuild / endYear := Some(2022)
-
-ThisBuild / homepage := Some(url("https://github.com/typelevel/cats-effect-cps"))
-ThisBuild / scmInfo := Some(
-  ScmInfo(
-    url("https://github.com/typelevel/cats-effect-cps"),
-    "scm:git@github.com:typelevel/cats-effect-cps.git"))
 
 ThisBuild / developers := List(
-  Developer("djspiewak", "Daniel Spiewak", "@djspiewak", url("https://github.com/djspiewak")),
-  Developer("baccata", "Olivier Melois", "@baccata", url("https://github.com/baccata")))
+  tlGitHubDev("djspiewak", "Daniel Spiewak"),
+  tlGitHubDev("baccata", "Olivier Melois"))
 
 ThisBuild / crossScalaVersions := Seq("2.12.17", "2.13.10", "3.2.1")
 
+ThisBuild / githubWorkflowBuildMatrixExclusions ++= {
+  crossScalaVersions.value.filter(_.startsWith("2.")).map { scala =>
+    MatrixExclude(Map("scala" -> scala, "project" -> "rootNative"))
+  }
+}
+
 val CatsEffectVersion = "3.4.1"
 
-lazy val root = project.in(file(".")).aggregate(core.jvm, core.js, core.native).enablePlugins(NoPublishPlugin)
+lazy val root = tlCrossRootProject.aggregate(core)
 
 lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
   .in(file("core"))
   .settings(
     name := "cats-effect-cps",
+    headerEndYear := Some(2022),
 
     scalacOptions ++= {
-      if (isDotty.value)
+      if (tlIsScala3.value)
         Seq()
       else
         Seq("-Xasync")
     },
 
-    resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-effect-std" % CatsEffectVersion,
 
@@ -60,7 +56,7 @@ lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
       "org.typelevel" %%% "cats-effect-testing-specs2" % "1.5.0" % Test),
 
     libraryDependencies ++= {
-      if (isDotty.value)
+      if (tlIsScala3.value)
         Seq("com.github.rssh" %%% "dotty-cps-async" % "0.9.11")
       else
         Seq("org.scala-lang" % "scala-reflect"   % scalaVersion.value % "provided")
