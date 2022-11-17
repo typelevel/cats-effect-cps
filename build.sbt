@@ -57,7 +57,7 @@ lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
       "org.typelevel" %%% "cats-effect-std" % CatsEffectVersion,
 
       "org.typelevel" %%% "cats-effect"                % CatsEffectVersion % Test,
-      "org.typelevel" %%% "cats-effect-testing-specs2" % "1.5-93cc5e3-SNAPSHOT" % Test),
+      "org.typelevel" %%% "cats-effect-testing-specs2" % "1.5.0" % Test),
 
     libraryDependencies ++= {
       if (isDotty.value)
