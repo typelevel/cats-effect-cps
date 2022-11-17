@@ -8,3 +8,6 @@ tags
 
 /.bsp/
 .history
+.idea
+.vscode
+.metals
