@@ -36,6 +36,14 @@ object cps {
   implicit def automaticColoringTag1[F[_]:Concurrent]: _root_.cps.automaticColoring.AutomaticColoringTag[F] = ???
   implicit def automaticColoringTag2[F[_]:Concurrent]: _root_.cps.automaticColoring.AutomaticColoringTag[F] = ???
 
+  // actually not used by dotty-cps-async but need for binary compability with cats-effect-cps 0.4.x.
+  // TODO: remove in 0.5.0
+  implicit def catsEffectCpsMonadPureMemoization[F[_]](implicit F: Concurrent[F]): CpsMonadMemoization.Pure[F] =
+    new CpsMonadMemoization.Pure[F] {
+      def apply[A](fa: F[A]): F[F[A]] = F.memoize(fa)
+    }
+
+
   // TODO we can actually provide some more gradient instances here
   implicit def catsEffectCpsConcurrentMonad[F[_]](implicit F: Async[F]): CpsConcurrentEffectMonad[F] with CpsMonadInstanceContext[F] =
     new CpsConcurrentEffectMonad[F] with CpsMonadInstanceContext[F] {
