@@ -21,6 +21,7 @@ import _root_.cps.{async, await, CpsAsyncMonad, CpsAwaitable, CpsConcurrentEffec
 import cats.effect.kernel.{Async, Concurrent, Fiber, Sync}
 import cats.effect.kernel.syntax.all._
 
+import scala.annotation.implicitNotFound
 import scala.util.Try
 
 object cps {
@@ -31,10 +32,9 @@ object cps {
     transparent inline def await: A = _root_.cps.await[F, A, F](self)
   }
 
-  implicit def catsEffectCpsMonadPureMemoization[F[_]](implicit F: Concurrent[F]): CpsMonadMemoization.Pure[F] =
-    new CpsMonadMemoization.Pure[F] {
-      def apply[A](fa: F[A]): F[F[A]] = F.memoize(fa)
-    }
+  @implicitNotFound("automatic coloring is disabled")
+  implicit def automaticColoringTag1[F[_]:Concurrent]: _root_.cps.automaticColoring.AutomaticColoringTag[F] = ???
+  implicit def automaticColoringTag2[F[_]:Concurrent]: _root_.cps.automaticColoring.AutomaticColoringTag[F] = ???
 
   // TODO we can actually provide some more gradient instances here
   implicit def catsEffectCpsConcurrentMonad[F[_]](implicit F: Async[F]): CpsConcurrentEffectMonad[F] with CpsMonadInstanceContext[F] =
