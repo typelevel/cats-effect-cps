@@ -61,7 +61,7 @@ lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
 
     libraryDependencies ++= {
       if (tlIsScala3.value)
-        Seq("com.github.rssh" %%% "dotty-cps-async" % "0.9.11")
+        Seq("com.github.rssh" %%% "dotty-cps-async" % "0.9.12")
       else
         Seq("org.scala-lang" % "scala-reflect"   % scalaVersion.value % "provided")
     })
