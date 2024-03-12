@@ -85,16 +85,16 @@ object cps {
       op.cancel
   }
 
-  given [F[_]: Monad]: CpsMonad[F] = new MonadCpsMonad[F]
+  implicit def catsMonadCps[F[_]](implicit F: Monad[F]): CpsMonad[F] = new MonadCpsMonad[F]
     with CpsPureMonadInstanceContext[F]
 
-  given [F[_]: MonadThrow]: CpsTryMonad[F] = new MonadThrowCpsMonad[F]
+  implicit def catsMonadThrowCps[F[_]](implicit F: Async[F]): CpsTryMonad[F] = new MonadThrowCpsMonad[F]
     with CpsTryMonadInstanceContext[F]
 
-  given [F[_]: Async]: CpsAsyncEffectMonad[F] = new AsyncCpsMonad[F]
+  implicit def catsAsyncCps[F[_]](implicit F: Async[F]): CpsAsyncEffectMonad[F] = new AsyncCpsMonad[F]
     with CpsAsyncEffectMonadInstanceContext[F]
 
-  given [F[_]: Async: Concurrent]: CpsConcurrentEffectMonad[F] =
+  implicit def catsConcurrentCps[F[_]](implicit F: Async[F], concurrent: Concurrent[F]): CpsConcurrentEffectMonad[F] =
     new ConcurrentCpsMonad[F] with CpsConcurrentEffectMonadInstanceContext[F]
 
 }
