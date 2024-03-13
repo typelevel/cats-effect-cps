@@ -24,13 +24,7 @@ ThisBuild / developers := List(
   tlGitHubDev("djspiewak", "Daniel Spiewak"),
   tlGitHubDev("baccata", "Olivier Melois"))
 
-ThisBuild / crossScalaVersions := Seq("2.12.19", "2.13.12", "3.3.3")
-
-ThisBuild / githubWorkflowBuildMatrixExclusions ++= {
-  crossScalaVersions.value.filter(_.startsWith("2.")).map { scala =>
-    MatrixExclude(Map("scala" -> scala, "project" -> "rootNative"))
-  }
-}
+ThisBuild / crossScalaVersions := Seq("2.12.19", "2.13.13", "3.3.3")
 
 val CatsEffectVersion = "3.5.4"
 
