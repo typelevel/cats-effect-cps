@@ -28,13 +28,13 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        scala: [2.12.19, 2.13.12, 3.3.3]
+        scala: [2.12.19, 2.13.13, 3.3.3]
         java: [temurin@8]
         project: [rootJS, rootJVM, rootNative]
         exclude:
           - scala: 2.12.19
             project: rootNative
-          - scala: 2.13.12
+          - scala: 2.13.13
             project: rootNative
     runs-on: ${{ matrix.os }}
     steps:
