@@ -16,67 +16,85 @@
 
 package cats.effect
 
-import _root_.cps.{async, await, CpsAsyncMonad, CpsAwaitable, CpsConcurrentEffectMonad, CpsMonad, CpsMonadContext, CpsMonadInstanceContext, CpsMonadMemoization}
-
-import cats.effect.kernel.{Async, Concurrent, Fiber, Sync}
+import _root_.cps._
 import cats.effect.kernel.syntax.all._
+import cats.effect.kernel.{Async, Concurrent, Fiber, Sync}
+import cats.{Monad, MonadThrow}
 
-import scala.annotation.implicitNotFound
 import scala.util.Try
 
 object cps {
 
-  transparent inline def async[F[_]](using CpsMonad[F]) = _root_.cps.macros.Async.async[F]
+  transparent inline def async[F[_]](using CpsMonad[F]) =
+    _root_.cps.macros.Async.async[F]
 
-  extension [F[_], A](self: F[A])(using CpsAwaitable[F], CpsMonadContext[F]) {
+  extension [F[_], A](self: F[A])(using CpsMonadContext[F]) {
     transparent inline def await: A = _root_.cps.await[F, A, F](self)
   }
 
-  @implicitNotFound("automatic coloring is disabled")
-  implicit def automaticColoringTag1[F[_]:Concurrent]: _root_.cps.automaticColoring.AutomaticColoringTag[F] = ???
-  implicit def automaticColoringTag2[F[_]:Concurrent]: _root_.cps.automaticColoring.AutomaticColoringTag[F] = ???
+  abstract class MonadCpsMonad[F[_]: Monad] extends CpsMonad[F] {
+    override def pure[T](t: T): F[T] =
+      Monad[F].pure(t)
 
-  // actually not used by dotty-cps-async but need for binary compability with cats-effect-cps 0.4.x.
-  // TODO: remove in 0.5.0
-  implicit def catsEffectCpsMonadPureMemoization[F[_]](implicit F: Concurrent[F]): CpsMonadMemoization.Pure[F] =
-    new CpsMonadMemoization.Pure[F] {
-      def apply[A](fa: F[A]): F[F[A]] = F.memoize(fa)
-    }
+    override def map[A, B](fa: F[A])(f: A => B): F[B] =
+      Monad[F].map(fa)(f)
 
+    override def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B] =
+      Monad[F].flatMap(fa)(f)
+  }
 
-  // TODO we can actually provide some more gradient instances here
-  implicit def catsEffectCpsConcurrentMonad[F[_]](implicit F: Async[F]): CpsConcurrentEffectMonad[F] with CpsMonadInstanceContext[F] =
-    new CpsConcurrentEffectMonad[F] with CpsMonadInstanceContext[F] {
+  abstract class MonadThrowCpsMonad[F[_]: MonadThrow]
+      extends MonadCpsMonad[F]
+      with CpsTryMonad[F] {
+    override def error[A](e: Throwable): F[A] =
+      MonadThrow[F].raiseError(e)
 
-      type Spawned[A] = Fiber[F, Throwable, A]
+    override def flatMapTry[A, B](fa: F[A])(f: Try[A] => F[B]): F[B] =
+      MonadThrow[F].flatMap(MonadThrow[F].attempt(fa))(e => f(e.toTry))
+  }
 
-      def spawnEffect[A](op: => F[A]): F[Spawned[A]] =
-        F.defer(op).start
+  abstract class SyncCpsMonad[F[_]: Sync]
+      extends MonadThrowCpsMonad[F]
+      with CpsEffectMonad[F] {
+    override def delay[T](x: => T): F[T] =
+      Sync[F].delay(x)
 
-      def join[A](op: Spawned[A]): F[A] =
-        op.joinWithNever
+    override def flatDelay[T](x: => F[T]): F[T] =
+      Sync[F].defer(x)
+  }
 
-      def tryCancel[A](op: Spawned[A]): F[Unit] =
-        op.cancel
+  abstract class AsyncCpsMonad[F[_]: Async]
+      extends SyncCpsMonad[F]
+      with CpsAsyncEffectMonad[F] {
+    override def adoptCallbackStyle[A](source: (Try[A] => Unit) => Unit): F[A] =
+      Async[F].async_(f => source(e => f(e.toEither)))
+  }
 
-      override def delay[A](x: => A): F[A] =
-        Sync[F].delay(x)
+  abstract class ConcurrentCpsMonad[F[_]: Async: Concurrent]
+      extends AsyncCpsMonad[F]
+      with CpsConcurrentEffectMonad[F] {
+    override type Spawned[A] = Fiber[F, Throwable, A]
 
-      override def flatDelay[A](x: => F[A]): F[A] =
-        Sync[F].defer(x)
+    override def spawnEffect[A](op: => F[A]): F[Spawned[A]] =
+      Sync[F].defer(op).start
 
-      def adoptCallbackStyle[A](source: (Try[A] => Unit) => Unit): F[A] =
-        F.async_(cb => source(t => cb(t.toEither)))
+    override def join[A](op: Spawned[A]): F[A] =
+      op.joinWithNever
 
-      def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B] = F.flatMap(fa)(f)
+    override def tryCancel[A](op: Spawned[A]): F[Unit] =
+      op.cancel
+  }
 
-      def map[A, B](fa: F[A])(f: A => B): F[B] = F.map(fa)(f)
+  implicit def catsMonadCps[F[_]](implicit F: Monad[F]): CpsMonad[F] = new MonadCpsMonad[F]
+    with CpsPureMonadInstanceContext[F]
 
-      def pure[A](a: A): F[A] = F.pure(a)
+  implicit def catsMonadThrowCps[F[_]](implicit F: Async[F]): CpsTryMonad[F] = new MonadThrowCpsMonad[F]
+    with CpsTryMonadInstanceContext[F]
 
-      def error[A](e: Throwable): F[A] = F.raiseError(e)
+  implicit def catsAsyncCps[F[_]](implicit F: Async[F]): CpsAsyncEffectMonad[F] = new AsyncCpsMonad[F]
+    with CpsAsyncEffectMonadInstanceContext[F]
 
-      def flatMapTry[A,B](fa: F[A])(f: Try[A] => F[B]): F[B] =
-        F.flatMap(F.attempt(fa))(e => f(e.toTry))
-    }
+  implicit def catsConcurrentCps[F[_]](implicit F: Async[F], concurrent: Concurrent[F]): CpsConcurrentEffectMonad[F] =
+    new ConcurrentCpsMonad[F] with CpsConcurrentEffectMonadInstanceContext[F]
+
 }
