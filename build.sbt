@@ -52,6 +52,7 @@ lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
       tlFatalWarnings.value && !tlIsScala3.value
     },
     libraryDependencies ++= Seq(
+      "org.typelevel" %% "scalac-compat-annotation" % "0.1.4",
       "org.typelevel" %%% "cats-effect-std" % CatsEffectVersion,
       "org.typelevel" %%% "cats-effect" % CatsEffectVersion % Test,
       "org.typelevel" %%% "cats-effect-testing-specs2" % "1.5.0" % Test
