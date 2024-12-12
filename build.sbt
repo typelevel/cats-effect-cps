@@ -22,7 +22,8 @@ ThisBuild / startYear := Some(2021)
 
 ThisBuild / developers := List(
   tlGitHubDev("djspiewak", "Daniel Spiewak"),
-  tlGitHubDev("baccata", "Olivier Melois"))
+  tlGitHubDev("baccata", "Olivier Melois")
+)
 
 ThisBuild / crossScalaVersions := Seq("2.12.19", "2.13.12", "3.3.3")
 
@@ -41,30 +42,31 @@ lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
   .settings(
     name := "cats-effect-cps",
     headerEndYear := Some(2022),
-
     scalacOptions ++= {
       if (tlIsScala3.value)
         Seq()
       else
         Seq("-Xasync")
     },
-
     tlFatalWarnings := {
       tlFatalWarnings.value && !tlIsScala3.value
     },
-
     libraryDependencies ++= Seq(
+      "org.typelevel" %% "scalac-compat-annotation" % "0.1.4",
       "org.typelevel" %%% "cats-effect-std" % CatsEffectVersion,
-
-      "org.typelevel" %%% "cats-effect"                % CatsEffectVersion % Test,
-      "org.typelevel" %%% "cats-effect-testing-specs2" % "1.5.0" % Test),
-
+      "org.typelevel" %%% "cats-effect" % CatsEffectVersion % Test,
+      "org.typelevel" %%% "cats-effect-testing-specs2" % "1.5.0" % Test
+    ),
     libraryDependencies ++= {
       if (tlIsScala3.value)
         Seq("com.github.rssh" %%% "dotty-cps-async" % "0.9.20")
       else
-        Seq("org.scala-lang" % "scala-reflect"   % scalaVersion.value % "provided")
-    })
-    .nativeSettings(
-      crossScalaVersions := (ThisBuild / crossScalaVersions).value.filter(_.startsWith("3."))
-    )
+        Seq(
+          "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided"
+        )
+    }
+  )
+  .nativeSettings(
+    crossScalaVersions := (ThisBuild / crossScalaVersions).value
+      .filter(_.startsWith("3."))
+  )

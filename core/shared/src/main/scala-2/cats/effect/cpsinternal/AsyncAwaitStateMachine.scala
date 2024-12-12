@@ -21,6 +21,7 @@ import cats.effect.kernel.Outcome.{Canceled, Errored, Succeeded}
 import cats.effect.kernel.syntax.all._
 import cats.effect.std.Dispatcher
 import cats.syntax.all._
+import org.typelevel.scalaccompat.annotation._
 
 abstract class AsyncAwaitStateMachine[F[_]](
     dispatcher: Dispatcher[F],
@@ -78,6 +79,7 @@ abstract class AsyncAwaitStateMachine[F[_]](
     }
   }
 
+  @nowarn212("cat=unused")
   protected def getCompleted(f: F[AnyRef]): AsyncAwaitDsl.AwaitOutcome[F] = {
     val _ = f
     null
