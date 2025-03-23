@@ -33,7 +33,7 @@ ThisBuild / githubWorkflowBuildMatrixExclusions ++= {
   }
 }
 
-val CatsEffectVersion = "3.5.7"
+val CatsEffectVersion = "3.6.0"
 
 lazy val root = tlCrossRootProject.aggregate(core)
 
