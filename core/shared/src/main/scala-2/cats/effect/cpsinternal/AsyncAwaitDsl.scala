@@ -99,7 +99,7 @@ object AsyncAwaitDsl {
           }
           ${F}.flatten {
             _root_.cats.effect.std.Dispatcher.sequential[$effect].use { dispatcher =>
-              ${F}.async_[$name#FF[AnyRef]](cb => new $name(dispatcher, cb).start())
+              ${F}.async[$name#FF[AnyRef]](cb => ${F}.delay { new $name(dispatcher, cb).start(); Some(${F}.unit) })
             }
           }.asInstanceOf[${c.macroApplication.tpe}]
         """
