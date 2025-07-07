@@ -25,7 +25,7 @@ ThisBuild / developers := List(
   tlGitHubDev("baccata", "Olivier Melois")
 )
 
-ThisBuild / crossScalaVersions := Seq("2.12.19", "2.13.12", "3.3.6")
+ThisBuild / crossScalaVersions := Seq("2.12.20", "2.13.16", "3.3.6")
 
 ThisBuild / githubWorkflowBuildMatrixExclusions ++= {
   crossScalaVersions.value.filter(_.startsWith("2.")).map { scala =>
@@ -33,7 +33,7 @@ ThisBuild / githubWorkflowBuildMatrixExclusions ++= {
   }
 }
 
-val CatsEffectVersion = "3.5.7"
+val CatsEffectVersion = "3.6.1"
 
 lazy val root = tlCrossRootProject.aggregate(core)
 
@@ -55,11 +55,11 @@ lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
       "org.typelevel" %% "scalac-compat-annotation" % "0.1.4",
       "org.typelevel" %%% "cats-effect-std" % CatsEffectVersion,
       "org.typelevel" %%% "cats-effect" % CatsEffectVersion % Test,
-      "org.typelevel" %%% "cats-effect-testing-specs2" % "1.5.0" % Test
+      "org.typelevel" %%% "cats-effect-testing-specs2" % "1.6.0" % Test
     ),
     libraryDependencies ++= {
       if (tlIsScala3.value)
-        Seq("com.github.rssh" %%% "dotty-cps-async" % "0.9.20")
+        Seq("com.github.rssh" %%% "dotty-cps-async" % "0.9.21")
       else
         Seq(
           "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided"
