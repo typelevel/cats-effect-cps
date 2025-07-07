@@ -105,6 +105,32 @@ class AsyncAwaitSpec extends Specification with CatsEffect {
 
     }
 
+    "cancellation yields cancelled outcome" in {
+
+      val program = for {
+        defer <- Deferred[IO, Unit]
+        fiber <- async[IO] {
+          // TODO: uncommenting these two lines makes the test flaky - it is sometimes timing out.
+          // defer.complete(()).await
+          // IO.never[Unit].await
+          (defer.complete(()) *> IO.never[Unit]).await
+        }.start
+        // we wait for defer to be sure that the dispatcher is actually running something
+        _ <- defer.get
+        _ <- fiber.cancel
+        outcome <- fiber.join
+      } yield {
+        outcome
+      }
+
+      program.flatMap { res =>
+        IO {
+          res must beEqualTo(Outcome.canceled[IO, Throwable, Unit])
+        }
+      }
+
+    }
+
     "suspend side effects" in {
       var x = 0
       val program = async[IO](x += 1)
