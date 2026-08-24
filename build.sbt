@@ -35,7 +35,7 @@ ThisBuild / githubWorkflowBuildMatrixExclusions ++= {
 
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("21"))
 
-val CatsEffectVersion = "3.7.0"
+val CatsEffectVersion = "3.7.1"
 
 lazy val root = tlCrossRootProject.aggregate(core)
 
